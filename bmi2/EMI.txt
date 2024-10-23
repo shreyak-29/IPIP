@@ -1,0 +1,110 @@
+Changes for EMI calculator
+
+
+***backend/routes/emiRoutes.js:
+const express = require('express');
+const router = express.Router();
+
+// EMI calculation route
+router.post('/calculate', async (req, res) => {
+  const { principal, rate, tenure } = req.body;
+
+  if (!principal || !rate || !tenure) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+
+  const monthlyRate = rate / (12 * 100); // Convert annual rate to monthly
+  const emi = (
+    (principal * monthlyRate * Math.pow(1 + monthlyRate, tenure)) /
+    (Math.pow(1 + monthlyRate, tenure) - 1)
+  ).toFixed(2);
+
+  res.status(200).json({ emi });
+});
+
+module.exports = router;
+
+
+
+****server.js
+const emiRoutes = require('./routes/emiRoutes');
+app.use('/api/emi', emiRoutes);
+
+***frontend/src/EMICalculator.js
+
+import React, { useState } from 'react';
+import axios from 'axios';
+import './App.css';
+
+const EMICalculator = () => {
+  const [principal, setPrincipal] = useState('');
+  const [rate, setRate] = useState('');
+  const [tenure, setTenure] = useState('');
+  const [emi, setEmi] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post('http://localhost:5000/api/emi/calculate', {
+        principal: parseFloat(principal),
+        rate: parseFloat(rate),
+        tenure: parseInt(tenure),
+      });
+      setEmi(response.data.emi);
+    } catch (error) {
+      console.error('Error calculating EMI:', error);
+    }
+  };
+
+  return (
+    <div className="bmi-container">
+      <h1>EMI Calculator</h1>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="number"
+          placeholder="Principal Amount"
+          value={principal}
+          onChange={(e) => setPrincipal(e.target.value)}
+          required
+        />
+        <br />
+        <input
+          type="number"
+          placeholder="Annual Interest Rate (%)"
+          value={rate}
+          onChange={(e) => setRate(e.target.value)}
+          required
+        />
+        <br />
+        <input
+          type="number"
+          placeholder="Loan Tenure (months)"
+          value={tenure}
+          onChange={(e) => setTenure(e.target.value)}
+          required
+        />
+        <br />
+        <button type="submit">Calculate EMI</button>
+      </form>
+
+      {emi && <h2>Your EMI: ₹{emi}</h2>}
+    </div>
+  );
+};
+
+export default EMICalculator;
+
+
+***frontend/src/App.js
+import React from 'react';
+import EMICalculator from './EMICalculator';
+
+function App() {
+  return (
+    <div className="App">
+      <EMICalculator />
+    </div>
+  );
+}
+
+export default App;
